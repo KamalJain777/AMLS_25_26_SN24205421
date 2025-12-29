@@ -1,0 +1,20 @@
+# Configuration for Model A (Classical ML)
+
+model:
+  model_type: "svm"  # 'svm' or 'logistic'
+  kernel: "rbf"  # 'linear', 'rbf', or 'poly' (for SVM)
+  C: 1.0  # Regularization parameter
+  gamma: "scale"  # Kernel coefficient for RBF ('scale', 'auto', or float)
+
+features:
+  mode: "raw"  # 'raw', 'pca', or 'hog'
+  pca_components: 64  # Number of PCA components (for 'pca' mode)
+  standardize: false  # Whether to apply StandardScaler to features
+
+data:
+  train_fraction: 1.0  # Fraction of training set to use (0 < fraction <= 1.0)
+  val_fraction: 1.0  # Fraction of validation set to use
+  normalize: true  # Whether to apply z-score normalization
+
+random_state: 42
+
