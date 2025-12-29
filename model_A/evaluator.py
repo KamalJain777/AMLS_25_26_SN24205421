@@ -153,15 +153,24 @@ def compare_feature_modes(
     output_path: Optional[str] = None
 ):
     """
-    Compare results across different feature modes.
+    Compare results across different feature modes (raw vs processed features).
+    
+    This function compares performance between:
+    - Raw features: Baseline flattened pixel features
+    - Processed features: PCA and HOG feature representations
     
     Args:
         results_dict: Dictionary mapping feature mode to results
         output_path: Optional path to save comparison CSV
     """
     print("\n" + "=" * 80)
-    print("Feature Mode Comparison")
+    print("Feature Mode Comparison: Raw vs Processed Features")
     print("=" * 80)
+    print("\nThis comparison evaluates the performance difference between:")
+    print("  - Raw features: Direct pixel values (baseline)")
+    print("  - PCA features: Dimensionality-reduced representation")
+    print("  - HOG features: Edge/texture-based representation")
+    print("\n" + "=" * 80)
     
     # Prepare comparison table
     rows = []
@@ -175,28 +184,147 @@ def compare_feature_modes(
                 row.update(results[split]['metrics'])
                 rows.append(row)
     
-    # Print table
+    # Print comprehensive comparison table
     if rows:
         # Header
         headers = ['Feature Mode', 'Split', 'Accuracy', 'Precision', 'Recall', 'F1-Score']
         if 'roc_auc' in rows[0]:
             headers.append('ROC-AUC')
         
-        print("\n" + " | ".join(f"{h:>12}" for h in headers))
-        print("-" * 80)
+        # Calculate column widths for better formatting
+        col_width = 14
+        table_width = len(headers) * col_width + (len(headers) - 1) * 3
         
-        for row in rows:
-            values = [
-                row['feature_mode'],
-                row['split'],
-                f"{row['accuracy']:.4f}",
-                f"{row['precision']:.4f}",
-                f"{row['recall']:.4f}",
-                f"{row['f1_score']:.4f}"
-            ]
-            if 'roc_auc' in row:
-                values.append(f"{row['roc_auc']:.4f}")
-            print(" | ".join(f"{v:>12}" for v in values))
+        # Print comprehensive comparison table
+        print("\n" + "=" * table_width)
+        print("PERFORMANCE COMPARISON: RAW vs PROCESSED FEATURES".center(table_width))
+        print("=" * table_width)
+        
+        # Group by split for better readability
+        for split in ['val', 'test']:
+            print(f"\n{split.upper()} SET RESULTS:")
+            print("-" * table_width)
+            
+            # Print header
+            header_row = " | ".join(f"{h:>{col_width}}" for h in headers)
+            print(header_row)
+            print("-" * table_width)
+            
+            split_rows = [r for r in rows if r['split'] == split]
+            
+            # Print each feature mode row
+            for row in split_rows:
+                # Format feature mode name (capitalize and add description)
+                mode_name = row['feature_mode'].upper()
+                if mode_name == 'RAW':
+                    mode_display = f"{mode_name} (baseline)"
+                elif mode_name == 'PCA':
+                    mode_display = f"{mode_name} (dimensionality reduction)"
+                elif mode_name == 'HOG':
+                    mode_display = f"{mode_name} (edge/texture)"
+                else:
+                    mode_display = mode_name
+                
+                values = [
+                    mode_display,
+                    split.upper(),
+                    f"{row['accuracy']:.4f}",
+                    f"{row['precision']:.4f}",
+                    f"{row['recall']:.4f}",
+                    f"{row['f1_score']:.4f}"
+                ]
+                if 'roc_auc' in row:
+                    values.append(f"{row['roc_auc']:.4f}")
+                
+                # Format values with proper alignment
+                formatted_values = []
+                for i, v in enumerate(values):
+                    if i == 0:  # Feature mode - left align
+                        formatted_values.append(f"{v:<{col_width}}")
+                    else:  # Numbers - right align
+                        formatted_values.append(f"{v:>{col_width}}")
+                
+                print(" | ".join(formatted_values))
+            
+            print("-" * table_width)
+        
+        # Find best performing feature mode for test set and create summary
+        test_rows = [r for r in rows if r['split'] == 'test']
+        if test_rows:
+            best_accuracy = max(test_rows, key=lambda x: x['accuracy'])
+            best_f1 = max(test_rows, key=lambda x: x['f1_score'])
+            raw_results = [r for r in test_rows if r['feature_mode'] == 'raw']
+            processed_results = [r for r in test_rows if r['feature_mode'] != 'raw']
+            
+            print("\n" + "=" * table_width)
+            print("SUMMARY: RAW vs PROCESSED FEATURES COMPARISON".center(table_width))
+            print("=" * table_width)
+            print(f"  Best Accuracy on Test Set: {best_accuracy['feature_mode'].upper()} ({best_accuracy['accuracy']:.4f})")
+            print(f"  Best F1-Score on Test Set: {best_f1['feature_mode'].upper()} ({best_f1['f1_score']:.4f})")
+            
+            if raw_results and processed_results:
+                raw_acc = raw_results[0]['accuracy']
+                best_processed_acc = max([r['accuracy'] for r in processed_results])
+                best_processed_mode = max(processed_results, key=lambda x: x['accuracy'])['feature_mode']
+                improvement = ((best_processed_acc - raw_acc) / raw_acc * 100) if raw_acc > 0 else 0
+                
+                print(f"\n  Raw features (baseline) accuracy:        {raw_acc:.4f}")
+                print(f"  Best processed features ({best_processed_mode.upper()}) accuracy: {best_processed_acc:.4f}")
+                if improvement > 0:
+                    print(f"  → Improvement with processed features: +{improvement:.2f}%")
+                elif improvement < 0:
+                    print(f"  → Change with processed features: {improvement:.2f}%")
+                else:
+                    print(f"  → No difference between raw and processed features")
+            
+            # Create side-by-side comparison table
+            print("\n" + "=" * table_width)
+            print("DETAILED PERFORMANCE COMPARISON TABLE".center(table_width))
+            print("=" * table_width)
+            
+            # Create comparison table with all metrics side by side
+            comp_headers = ['Feature Mode', 'Accuracy', 'Precision', 'Recall', 'F1-Score']
+            if 'roc_auc' in rows[0]:
+                comp_headers.append('ROC-AUC')
+            
+            comp_table_width = len(comp_headers) * col_width + (len(comp_headers) - 1) * 3
+            print("-" * comp_table_width)
+            print(" | ".join(f"{h:>{col_width}}" for h in comp_headers))
+            print("-" * comp_table_width)
+            
+            # Print test set results for all feature modes
+            for row in sorted(test_rows, key=lambda x: x['accuracy'], reverse=True):
+                mode_name = row['feature_mode'].upper()
+                if mode_name == 'RAW':
+                    mode_display = f"{mode_name} (baseline)"
+                elif mode_name == 'PCA':
+                    mode_display = f"{mode_name} (PCA)"
+                elif mode_name == 'HOG':
+                    mode_display = f"{mode_name} (HOG)"
+                else:
+                    mode_display = mode_name
+                
+                comp_values = [
+                    f"{mode_display:<{col_width}}",
+                    f"{row['accuracy']:.4f}",
+                    f"{row['precision']:.4f}",
+                    f"{row['recall']:.4f}",
+                    f"{row['f1_score']:.4f}"
+                ]
+                if 'roc_auc' in row:
+                    comp_values.append(f"{row['roc_auc']:.4f}")
+                
+                formatted_comp = []
+                for i, v in enumerate(comp_values):
+                    if i == 0:  # Feature mode - left align
+                        formatted_comp.append(f"{mode_display:<{col_width}}")
+                    else:  # Numbers - right align
+                        formatted_comp.append(f"{v:>{col_width}}")
+                
+                print(" | ".join(formatted_comp))
+            
+            print("-" * comp_table_width)
+            print("=" * table_width)
         
         # Save to CSV if path provided
         if output_path:

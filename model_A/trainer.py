@@ -1,7 +1,7 @@
 """Training utilities for Model A."""
 
 import numpy as np
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 from .classifier import ModelAClassifier
 from .evaluator import evaluate_model_a, save_results, compare_feature_modes
 
@@ -32,12 +32,22 @@ def train_model_a(
     Returns:
         Dictionary containing trained model and evaluation results
     """
-    # Initialize classifier
+    # Initialize classifier with GridSearchCV
+    # Get GridSearchCV parameters from config (look in 'model' key if nested)
+    model_config = config.get('model', config) if 'model' in config else config
+    
+    use_grid_search = model_config.get('use_grid_search', True)
+    cv = model_config.get('cv', 5)
+    verbose = model_config.get('verbose', 2)
+    
+    # Allow custom param_grid from config, otherwise use default
+    param_grid = model_config.get('param_grid', None)
+    
     model = ModelAClassifier(
-        model_type=config.get('model_type', 'svm'),
-        kernel=config.get('kernel', 'rbf'),
-        C=config.get('C', 1.0),
-        gamma=config.get('gamma', 'scale'),
+        param_grid=param_grid,
+        use_grid_search=use_grid_search,
+        cv=cv,
+        verbose=verbose,
         random_state=config.get('random_state', 42)
     )
     

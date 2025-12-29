@@ -1,10 +1,10 @@
 # Configuration for Model A (Classical ML)
 
 model:
-  model_type: "svm"  # 'svm' or 'logistic'
-  kernel: "rbf"  # 'linear', 'rbf', or 'poly' (for SVM)
-  C: 1.0  # Regularization parameter
-  gamma: "scale"  # Kernel coefficient for RBF ('scale', 'auto', or float)
+  use_grid_search: true  # Use GridSearchCV for hyperparameter tuning
+  cv: 5  # Number of cross-validation folds for GridSearchCV
+  verbose: 2  # Verbosity level for GridSearchCV (0=quiet, 1=some, 2=detailed)
+  # param_grid: null  # Optional: custom parameter grid (null uses default PARAM_GRID)
 
 features:
   mode: "raw"  # 'raw', 'pca', or 'hog'
