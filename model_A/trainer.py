@@ -20,11 +20,11 @@ def train_model_a(
     Train Model A classifier.
     
     Args:
-        X_train: Training features
+        X_train: Training features (already feature-extracted)
         y_train: Training labels
-        X_val: Validation features
+        X_val: Validation features (already feature-extracted)
         y_val: Validation labels
-        X_test: Test features
+        X_test: Test features (already feature-extracted)
         y_test: Test labels
         config: Configuration dictionary with model hyperparameters
         feature_mode: Feature mode used (for logging)
@@ -60,13 +60,13 @@ def train_model_a(
     # Train model
     model.fit(X_train, y_train)
     
-    # Evaluate on all splits
+    # Evaluate on all splits (with probabilities for ROC curves)
     results = {
         'feature_mode': feature_mode,
         'config': config,
-        'train': evaluate_model_a(model, X_train, y_train, split='train', print_results=False),
-        'val': evaluate_model_a(model, X_val, y_val, split='val', print_results=False),
-        'test': evaluate_model_a(model, X_test, y_test, split='test', print_results=True)
+        'train': evaluate_model_a(model, X_train, y_train, split='train', print_results=False, return_proba=True),
+        'val': evaluate_model_a(model, X_val, y_val, split='val', print_results=False, return_proba=True),
+        'test': evaluate_model_a(model, X_test, y_test, split='test', print_results=True, return_proba=True)
     }
     
     return {

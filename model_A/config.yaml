@@ -12,9 +12,19 @@ features:
   standardize: false  # Whether to apply StandardScaler to features
 
 data:
-  train_fraction: 1.0  # Fraction of training set to use (0 < fraction <= 1.0)
-  val_fraction: 1.0  # Fraction of validation set to use
+  train_fraction: 0.75  # Fraction of training set to use (0 < fraction <= 1.0)
+  val_fraction: 0.25 # Fraction of validation set to use
   normalize: true  # Whether to apply z-score normalization
+
+augmentation:
+  enabled: false  # Whether to apply data augmentation to training set
+  augmentation_factor: 1.0  # Factor by which to multiply training set size (1.0 = same size)
+  rotation_range: 5.0  # Maximum rotation angle in degrees (reduced)
+  translation_range: 1.0  # Maximum translation in pixels (reduced)
+  flip_horizontal: false  # Whether to apply random horizontal flip (disabled)
+  gaussian_noise_std: 0.0  # Disabled (set >0 to enable)
+  brightness_range: 0.0  # Disabled (set >0 to enable)
+  blur_sigma: null  # Gaussian blur sigma (null to disable)
 
 random_state: 42
 

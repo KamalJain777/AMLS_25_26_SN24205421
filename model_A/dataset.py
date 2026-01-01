@@ -9,7 +9,7 @@ class BreastMNISTDataset:
     """
     Unified interface for loading and managing BreastMNIST dataset.
     
-    Loads train, validation, and test splits from the BreastMNIST folder.
+    Loads train, validation, and test splits from BreastMNIST.npz file.
     Assumes the structure follows MedMNIST format with .npz file containing:
     - train_images, train_labels
     - val_images, val_labels
@@ -18,7 +18,7 @@ class BreastMNISTDataset:
     
     def __init__(
         self,
-        data_dir: str = "Datasets/BreastMNIST",
+        data_dir: str = "Datasets",
         normalize: bool = True,
         normalize_mode: str = "zscore",
         random_state: int = 42
@@ -27,7 +27,7 @@ class BreastMNISTDataset:
         Initialize BreastMNIST dataset loader.
         
         Args:
-            data_dir: Path to BreastMNIST folder containing the .npz file
+            data_dir: Path to directory containing the BreastMNIST.npz file
             normalize: Whether to normalize pixel values to [0, 1]
             normalize_mode: Normalization mode ('minmax' for [0,1] or 'zscore' for z-score)
             random_state: Random seed for reproducibility
@@ -55,7 +55,7 @@ class BreastMNISTDataset:
                 "Please ensure BreastMNIST data is available."
             )
         
-        # Use the first .npz file found (typically breastmnist.npz)
+        # Use the first .npz file found (typically BreastMNIST.npz)
         data_path = npz_files[0]
         data = np.load(data_path, allow_pickle=True)
         
@@ -128,7 +128,7 @@ class BreastMNISTDataset:
     def get_split(
         self,
         split: str = "train",
-        fraction: float = 1.0,
+        fraction: float = 0.75,
         return_labels: bool = True
     ) -> Tuple[np.ndarray, ...]:
         """
@@ -205,8 +205,8 @@ class BreastMNISTDataset:
     
     def get_all_splits(
         self,
-        train_fraction: float = 1.0,
-        val_fraction: float = 1.0
+        train_fraction: float = 0.75,
+        val_fraction: float = 0.25
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
         Get all splits (train, val, test) with optional subsampling.

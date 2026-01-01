@@ -89,8 +89,12 @@ class FeatureExtractor:
                 self.scaler = StandardScaler()
                 self.scaler.fit(X_train_features)
         else:
-            # For HOG, we don't need to fit anything (just extract features)
-            pass
+            # For HOG, optionally fit a scaler on training HOG features (best practice:
+            # fit on train only, apply to val/test with the same scaler).
+            if self.standardize_features:
+                X_train_features = self._extract_hog_features(X_train)
+                self.scaler = StandardScaler()
+                self.scaler.fit(X_train_features)
         
         self.fitted = True
     
@@ -117,21 +121,7 @@ class FeatureExtractor:
             features = self.pca.transform(X_flat)
         
         elif self.mode == 'hog':
-            # Extract HOG features for each image
-            features = []
-            for img in X:
-                # Ensure image is 2D
-                if len(img.shape) == 3:
-                    img = img.squeeze()
-                
-                # Normalize image to [0, 255] uint8 for HOG
-                img_norm = ((img - img.min()) / (img.max() - img.min() + 1e-8) * 255).astype(np.uint8)
-                
-                # Extract HOG features
-                hog_feat = hog(img_norm, **self.hog_params)
-                features.append(hog_feat)
-            
-            features = np.array(features)
+            features = self._extract_hog_features(X)
         
         else:
             raise ValueError(f"Unknown mode: {self.mode}")
@@ -139,8 +129,32 @@ class FeatureExtractor:
         # Apply StandardScaler if needed
         if self.standardize_features and self.scaler is not None:
             features = self.scaler.transform(features)
-        
+
         return features
+
+    def _extract_hog_features(self, X: np.ndarray) -> np.ndarray:
+        """
+        Extract HOG features for a batch of images.
+
+        Best practice notes:
+        - Keep extraction deterministic given X.
+        - Keep scaling consistent: we rescale each image to [0, 1] float32 for HOG.
+        """
+        features = []
+        for img in X:
+            # Ensure image is 2D
+            if len(img.shape) == 3:
+                img = img.squeeze()
+
+            img = img.astype(np.float32, copy=False)
+            # Rescale to [0, 1] for HOG (handles z-scored images too)
+            img_norm = (img - img.min()) / (img.max() - img.min() + 1e-8)
+            img_norm = np.clip(img_norm, 0.0, 1.0)
+
+            hog_feat = hog(img_norm, **self.hog_params)
+            features.append(hog_feat)
+
+        return np.array(features)
     
     def fit_transform(self, X_train: np.ndarray) -> np.ndarray:
         """

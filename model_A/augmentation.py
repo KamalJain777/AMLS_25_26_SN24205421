@@ -8,11 +8,11 @@ from scipy.ndimage import gaussian_filter
 
 def augment_image(
     image: np.ndarray,
-    rotation_range: float = 10.0,
-    translation_range: float = 2.0,
-    flip_horizontal: bool = True,
-    gaussian_noise_std: Optional[float] = 0.05,
-    brightness_range: float = 0.1,
+    rotation_range: float = 5.0,
+    translation_range: float = 1.0,
+    flip_horizontal: bool = False,
+    gaussian_noise_std: Optional[float] = 0.0,
+    brightness_range: float = 0.0,
     blur_sigma: Optional[float] = None
 ) -> np.ndarray:
     """
@@ -31,6 +31,11 @@ def augment_image(
         Augmented image
     """
     aug_image = image.copy()
+    
+    # Store original image range for proper clipping
+    # This preserves the data distribution after augmentations
+    img_min = image.min()
+    img_max = image.max()
     
     # Random rotation
     if rotation_range > 0:
@@ -51,15 +56,15 @@ def augment_image(
     if gaussian_noise_std is not None and gaussian_noise_std > 0:
         noise = np.random.normal(0, gaussian_noise_std, aug_image.shape)
         aug_image = aug_image + noise
-        # Clip to valid range
-        aug_image = np.clip(aug_image, aug_image.min(), aug_image.max())
+        # Clip to original image range to preserve data distribution
+        aug_image = np.clip(aug_image, img_min, img_max)
     
     # Brightness adjustment
     if brightness_range > 0:
         brightness_factor = np.random.uniform(1 - brightness_range, 1 + brightness_range)
         aug_image = aug_image * brightness_factor
-        # Clip to valid range
-        aug_image = np.clip(aug_image, aug_image.min(), aug_image.max())
+        # Clip to original image range to preserve data distribution
+        aug_image = np.clip(aug_image, img_min, img_max)
     
     # Gaussian blur
     if blur_sigma is not None and blur_sigma > 0:

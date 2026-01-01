@@ -340,3 +340,184 @@ def compare_feature_modes(
     
     print("=" * 80)
 
+
+def compare_augmentation(
+    results_without_aug: Dict[str, Any],
+    results_with_aug: Dict[str, Any],
+    output_path: Optional[str] = None
+):
+    """
+    Compare results with and without data augmentation.
+    
+    Args:
+        results_without_aug: Results dictionary from training without augmentation
+        results_with_aug: Results dictionary from training with augmentation
+        output_path: Optional path to save comparison CSV
+    """
+    print("\n" + "=" * 80)
+    print("Augmentation Comparison: Without vs With Data Augmentation")
+    print("=" * 80)
+    print("\nThis comparison evaluates the performance difference between:")
+    print("  - Without augmentation: Baseline training on original dataset")
+    print("  - With augmentation: Training with augmented dataset")
+    print("\n" + "=" * 80)
+    
+    # Prepare comparison table
+    rows = []
+    for split in ['val', 'test']:
+        if split in results_without_aug and 'metrics' in results_without_aug[split]:
+            row = {
+                'augmentation': 'without',
+                'split': split
+            }
+            row.update(results_without_aug[split]['metrics'])
+            rows.append(row)
+        
+        if split in results_with_aug and 'metrics' in results_with_aug[split]:
+            row = {
+                'augmentation': 'with',
+                'split': split
+            }
+            row.update(results_with_aug[split]['metrics'])
+            rows.append(row)
+    
+    # Print comprehensive comparison table
+    if rows:
+        # Header
+        headers = ['Augmentation', 'Split', 'Accuracy', 'Precision', 'Recall', 'F1-Score']
+        if 'roc_auc' in rows[0]:
+            headers.append('ROC-AUC')
+        
+        # Calculate column widths for better formatting
+        col_width = 14
+        table_width = len(headers) * col_width + (len(headers) - 1) * 3
+        
+        # Print comprehensive comparison table
+        print("\n" + "=" * table_width)
+        print("PERFORMANCE COMPARISON: WITHOUT vs WITH AUGMENTATION".center(table_width))
+        print("=" * table_width)
+        
+        # Group by split for better readability
+        for split in ['val', 'test']:
+            print(f"\n{split.upper()} SET RESULTS:")
+            print("-" * table_width)
+            
+            # Print header
+            header_row = " | ".join(f"{h:>{col_width}}" for h in headers)
+            print(header_row)
+            print("-" * table_width)
+            
+            split_rows = [r for r in rows if r['split'] == split]
+            
+            # Print each augmentation setting row
+            for row in split_rows:
+                aug_name = row['augmentation'].upper()
+                if aug_name == 'WITHOUT':
+                    aug_display = "Without (baseline)"
+                else:
+                    aug_display = "With augmentation"
+                
+                values = [
+                    aug_display,
+                    split.upper(),
+                    f"{row['accuracy']:.4f}",
+                    f"{row['precision']:.4f}",
+                    f"{row['recall']:.4f}",
+                    f"{row['f1_score']:.4f}"
+                ]
+                if 'roc_auc' in row:
+                    values.append(f"{row['roc_auc']:.4f}")
+                
+                # Format values with proper alignment
+                formatted_values = []
+                for i, v in enumerate(values):
+                    if i == 0:  # Augmentation - left align
+                        formatted_values.append(f"{v:<{col_width}}")
+                    else:  # Numbers - right align
+                        formatted_values.append(f"{v:>{col_width}}")
+                
+                print(" | ".join(formatted_values))
+            
+            print("-" * table_width)
+        
+        # Find best performing setting for test set and create summary
+        test_rows = [r for r in rows if r['split'] == 'test']
+        if len(test_rows) == 2:
+            without_row = [r for r in test_rows if r['augmentation'] == 'without'][0]
+            with_row = [r for r in test_rows if r['augmentation'] == 'with'][0]
+            
+            print("\n" + "=" * table_width)
+            print("SUMMARY: AUGMENTATION COMPARISON".center(table_width))
+            print("=" * table_width)
+            
+            without_acc = without_row['accuracy']
+            with_acc = with_row['accuracy']
+            improvement = ((with_acc - without_acc) / without_acc * 100) if without_acc > 0 else 0
+            
+            print(f"  Without augmentation (baseline) accuracy: {without_acc:.4f}")
+            print(f"  With augmentation accuracy:                {with_acc:.4f}")
+            if improvement > 0:
+                print(f"  → Improvement with augmentation: +{improvement:.2f}%")
+            elif improvement < 0:
+                print(f"  → Change with augmentation: {improvement:.2f}%")
+            else:
+                print(f"  → No difference with augmentation")
+            
+            # Detailed comparison table
+            print("\n" + "=" * table_width)
+            print("DETAILED PERFORMANCE COMPARISON TABLE".center(table_width))
+            print("=" * table_width)
+            
+            comp_headers = ['Augmentation', 'Accuracy', 'Precision', 'Recall', 'F1-Score']
+            if 'roc_auc' in rows[0]:
+                comp_headers.append('ROC-AUC')
+            
+            comp_table_width = len(comp_headers) * col_width + (len(comp_headers) - 1) * 3
+            print("-" * comp_table_width)
+            print(" | ".join(f"{h:>{col_width}}" for h in comp_headers))
+            print("-" * comp_table_width)
+            
+            # Print test set results
+            for row in [without_row, with_row]:
+                aug_name = row['augmentation'].upper()
+                if aug_name == 'WITHOUT':
+                    aug_display = "Without (baseline)"
+                else:
+                    aug_display = "With augmentation"
+                
+                comp_values = [
+                    f"{aug_display:<{col_width}}",
+                    f"{row['accuracy']:.4f}",
+                    f"{row['precision']:.4f}",
+                    f"{row['recall']:.4f}",
+                    f"{row['f1_score']:.4f}"
+                ]
+                if 'roc_auc' in row:
+                    comp_values.append(f"{row['roc_auc']:.4f}")
+                
+                formatted_comp = []
+                for i, v in enumerate(comp_values):
+                    if i == 0:  # Augmentation - left align
+                        formatted_comp.append(f"{aug_display:<{col_width}}")
+                    else:  # Numbers - right align
+                        formatted_comp.append(f"{v:>{col_width}}")
+                
+                print(" | ".join(formatted_comp))
+            
+            print("-" * comp_table_width)
+            print("=" * table_width)
+        
+        # Save to CSV if path provided
+        if output_path:
+            output_path = Path(output_path)
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            fieldnames = ['augmentation', 'split'] + [k for k in rows[0].keys() if k not in ['augmentation', 'split']]
+            with open(output_path, 'w', newline='') as f:
+                writer = csv.DictWriter(f, fieldnames=fieldnames)
+                writer.writeheader()
+                writer.writerows(rows)
+            print(f"\nComparison saved to: {output_path}")
+    
+    print("=" * 80)
+
