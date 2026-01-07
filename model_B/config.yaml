@@ -1,0 +1,35 @@
+# Configuration for Model B (Deep Learning)
+
+model:
+  base_channels: 16  # Base number of channels (controls model capacity)
+  num_blocks: 2  # Number of residual blocks per stage
+  dropout_rate: 0.5  # Dropout rate
+
+training:
+  num_epochs: 50
+  batch_size: 32
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  early_stopping_patience: 10
+  run_ablation: true  # If true: run augmentation OFF vs ON (2x training time)
+  num_workers: 0  # DataLoader workers (0 is safest on Windows)
+  torch_num_threads: null  # Optional: set torch CPU threads (null = default)
+  torch_num_interop_threads: null  # Optional: set torch interop threads (null = default)
+
+data:
+  train_fraction: 1.0  # Fraction of training set to use
+  val_fraction: 1.0  # Fraction of validation set to use
+  normalize: true
+
+augmentation:
+  enabled: true
+  rotation_range: 10.0  # Maximum rotation angle in degrees
+  translation_range: 0.1  # Maximum translation as fraction of image size
+  flip_horizontal: true
+  brightness_range: 0.2
+  contrast_range: 0.2
+  gaussian_noise_std: null  # Standard deviation of Gaussian noise (null to disable)
+
+device: "cpu"  # 'cpu' or 'cuda'
+random_state: 42
+
