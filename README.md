@@ -1,6 +1,23 @@
 # ELEC0134 AMLS Assignment - BreastMNIST Classification
 
-This project implements classification models for the BreastMNIST dataset as part of the ELEC0134 Applied Machine Learning Systems assignment.
+## Project Overview
+
+For this assignment, we benchmark the performance of **two machine learning models** on a **single medical image dataset from MedMNIST (BreastMNIST)**. The goal is to understand how **model capacity**, **data augmentation**, and **training budget** influence performance across both **classical** and **deep learning** approaches.
+
+### What this repository does
+
+- **Dataset**: Loads the official MedMNIST-style `BreastMNIST.npz` from `Datasets/` and uses the provided **train/val/test** splits.
+- **Model A (Classical ML)**: Extracts features (**raw pixels / PCA / HOG**) and trains an **SVM (RBF)** using **GridSearchCV**, then reports metrics.
+- **Model B (Deep Learning)**: Trains a small **ResNet-style CNN** in PyTorch with early stopping and optional augmentation (as configured).
+- **Evaluation**: Reports **Accuracy, Precision, Recall, F1-score** (and ROC-AUC where probabilities are available), plus confusion matrices and saved plots when `--out_dir` is provided.
+
+### Assignment factors you can vary (experiments)
+
+- **Training budget**: `--train_fraction`, `--val_fraction`
+- **Representation / preprocessing (Model A)**: `raw` vs `pca` vs `hog`
+- **Augmentation**:
+  - **Model A**: compares **without vs with** augmentation using the augmentation settings in `model_A/config.yaml`
+  - **Model B**: controlled via `model_B/config.yaml` (and optional CLI ablation flag if enabled in your code)
 
 ## Project Structure
 
@@ -24,8 +41,8 @@ AMLS_25_26_SN24205421/
 │   ├── evaluator.py      # Evaluation utilities
 │   ├── augmentation.py   # Data augmentation (PyTorch)
 │   └── config.yaml       # Configuration file for Model B
-├── Datasets/             # Dataset directory (must remain empty in submission)
-│   └── BreastMNIST.npz   # BreastMNIST dataset file (populated by marker)
+├── Datasets/             # Dataset directory 
+│   └── .gitkeep          # An empty placeholder so Git tracks the empty folder (DO NOT commit dataset files)
 ├── main.py               # Main entry point (includes utility functions)
 ├── results/              # Output directory (auto-created; safe to delete/re-generate)
 │   ├── comparison_summary.md
@@ -39,37 +56,26 @@ AMLS_25_26_SN24205421/
 
 ### Requirements
 
-Install the required packages:
+Install the required packages (these match the imports used in this repo):
 
 ```bash
-pip install numpy scipy scikit-learn scikit-image matplotlib torch torchvision pyyaml tqdm
+pip install numpy scipy scikit-learn scikit-image matplotlib seaborn torch torchvision pyyaml tqdm pillow
 ```
 
-Or create a `requirements.txt` file with:
-
-```
-numpy>=1.20.0
-scipy>=1.7.0
-scikit-learn>=1.0.0
-scikit-image>=0.18.0
-matplotlib>=3.3.0
-torch>=1.10.0
-torchvision>=0.11.0
-pyyaml>=5.4.0
-tqdm>=4.62.0
-Pillow>=8.0.0
-```
-
-Then install with:
-```bash
-pip install -r requirements.txt
-```
+Notes:
+- `scikit-image` is required for **HOG** features in Model A.
+- `seaborn` is used for the evaluation plots (confusion matrices, metric bars, etc.).
+- `pillow` is required by the PyTorch image pipeline (`PIL.Image`).
 
 ### Dataset
 
-The BreastMNIST dataset file (`BreastMNIST.npz`) should be placed directly in the `Datasets/` folder. The marker will populate this file with the official train/val/test data in `.npz` format following the MedMNIST structure.
+For local runs, place the BreastMNIST dataset file (`BreastMNIST.npz`) directly in `Datasets/`.
+
+For submission/marking, **do not commit any dataset files**. The marker will provide `BreastMNIST.npz` in `Datasets/` during evaluation.
 
 **Important:** Do not save any processed or intermediate data in the `Datasets/` folder. Only the original dataset files should be present.
+
+If you accidentally committed a dataset file previously, remove it from Git history/tracking (while keeping your local copy) using `git rm --cached` and commit that change.
 
 ## Usage
 
