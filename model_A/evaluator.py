@@ -270,12 +270,13 @@ def compare_feature_modes(
                 
                 print(f"\n  Raw features (baseline) accuracy:        {raw_acc:.4f}")
                 print(f"  Best processed features ({best_processed_mode.upper()}) accuracy: {best_processed_acc:.4f}")
+                # Use ASCII-only output for Windows consoles (avoid UnicodeEncodeError)
                 if improvement > 0:
-                    print(f"  → Improvement with processed features: +{improvement:.2f}%")
+                    print(f"  -> Improvement with processed features: +{improvement:.2f}%")
                 elif improvement < 0:
-                    print(f"  → Change with processed features: {improvement:.2f}%")
+                    print(f"  -> Change with processed features: {improvement:.2f}%")
                 else:
-                    print(f"  → No difference between raw and processed features")
+                    print("  -> No difference between raw and processed features")
             
             # Create side-by-side comparison table
             print("\n" + "=" * table_width)
@@ -456,12 +457,13 @@ def compare_augmentation(
             
             print(f"  Without augmentation (baseline) accuracy: {without_acc:.4f}")
             print(f"  With augmentation accuracy:                {with_acc:.4f}")
+            # Use ASCII-only output for Windows consoles (avoid UnicodeEncodeError)
             if improvement > 0:
-                print(f"  → Improvement with augmentation: +{improvement:.2f}%")
+                print(f"  -> Improvement with augmentation: +{improvement:.2f}%")
             elif improvement < 0:
-                print(f"  → Change with augmentation: {improvement:.2f}%")
+                print(f"  -> Change with augmentation: {improvement:.2f}%")
             else:
-                print(f"  → No difference with augmentation")
+                print("  -> No difference with augmentation")
             
             # Detailed comparison table
             print("\n" + "=" * table_width)

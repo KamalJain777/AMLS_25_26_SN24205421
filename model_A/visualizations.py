@@ -9,6 +9,7 @@ import seaborn as sns
 from typing import Optional, Dict, Any, List
 from pathlib import Path
 from sklearn.metrics import confusion_matrix, roc_curve, auc
+from sklearn.model_selection import StratifiedKFold, learning_curve
 import warnings
 
 warnings.filterwarnings('ignore')
@@ -539,5 +540,77 @@ def plot_augmentation_roc_curves(
         print(f"Augmentation ROC curves saved to: {save_path}")
     # Note: Using Agg backend (non-interactive), so plt.show() is not needed
     
+    plt.close()
+
+
+def plot_learning_curve_model_a(
+    estimator,
+    X: np.ndarray,
+    y: np.ndarray,
+    cv: int = 5,
+    scoring: str = "accuracy",
+    random_state: int = 42,
+    train_sizes: Optional[np.ndarray] = None,
+    title: str = "Model A Learning Curve",
+    save_path: Optional[Path] = None,
+    figsize: tuple = (10, 6),
+):
+    """
+    Plot a scikit-learn learning curve for Model A.
+
+    Note: For classical models (e.g., SVM) there is no epoch-by-epoch training curve.
+    A learning curve shows how performance scales with training set size.
+
+    Args:
+        estimator: Fitted or unfitted sklearn estimator (must be cloneable)
+        X: Feature matrix (N, D)
+        y: Labels (N,)
+        cv: Number of CV folds (StratifiedKFold)
+        scoring: sklearn scoring string (default: accuracy)
+        random_state: Seed for shuffling CV splits
+        train_sizes: Fractions or absolute sizes for learning_curve
+        title: Plot title
+        save_path: Optional path to save the figure
+        figsize: Figure size
+    """
+    if train_sizes is None:
+        # Use fractions to adapt to different dataset sizes
+        train_sizes = np.linspace(0.1, 1.0, 6)
+
+    cv_splitter = StratifiedKFold(n_splits=int(cv), shuffle=True, random_state=int(random_state))
+
+    sizes, train_scores, val_scores = learning_curve(
+        estimator=estimator,
+        X=X,
+        y=y,
+        cv=cv_splitter,
+        scoring=scoring,
+        train_sizes=train_sizes,
+        n_jobs=-1,
+    )
+
+    train_mean = np.nanmean(train_scores, axis=1)
+    train_std = np.nanstd(train_scores, axis=1)
+    val_mean = np.nanmean(val_scores, axis=1)
+    val_std = np.nanstd(val_scores, axis=1)
+
+    fig, ax = plt.subplots(figsize=figsize)
+    ax.plot(sizes, train_mean, "o-", lw=2, label="Training score")
+    ax.fill_between(sizes, train_mean - train_std, train_mean + train_std, alpha=0.15)
+    ax.plot(sizes, val_mean, "o-", lw=2, label=f"CV score ({cv}-fold)")
+    ax.fill_between(sizes, val_mean - val_std, val_mean + val_std, alpha=0.15)
+
+    ax.set_title(title, fontsize=14, fontweight="bold")
+    ax.set_xlabel("Number of training samples", fontsize=12)
+    ax.set_ylabel(scoring.replace("_", " ").title(), fontsize=12)
+    ax.grid(alpha=0.3, linestyle="--")
+    ax.set_ylim(0.0, 1.05)
+    ax.legend(loc="best", fontsize=11)
+
+    plt.tight_layout()
+    if save_path:
+        Path(save_path).parent.mkdir(parents=True, exist_ok=True)
+        plt.savefig(save_path, bbox_inches="tight", dpi=150)
+        print(f"Learning curve saved to: {save_path}")
     plt.close()
 
