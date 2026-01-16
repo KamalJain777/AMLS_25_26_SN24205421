@@ -16,16 +16,16 @@ from .visualizations import (
 )
 
 __all__ = [
-    'get_breastmnist_dataloaders',
-    'ModelBNet',
-    'train_model_b',
-    'evaluate_model_b',
-    'plot_sample_images',
-    'plot_class_distribution',
-    'plot_training_curves',
-    'plot_confusion_matrix',
-    'plot_side_by_side_confusion_matrices',
-    'plot_roc_curve',
-    'plot_augmentation_roc_curves',
-    'plot_augmentation_comparison',
+    "get_breastmnist_dataloaders",
+    "ModelBNet",
+    "train_model_b",
+    "evaluate_model_b",
+    "plot_sample_images",
+    "plot_class_distribution",
+    "plot_training_curves",
+    "plot_confusion_matrix",
+    "plot_side_by_side_confusion_matrices",
+    "plot_roc_curve",
+    "plot_augmentation_roc_curves",
+    "plot_augmentation_comparison",
 ]

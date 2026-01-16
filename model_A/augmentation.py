@@ -13,11 +13,11 @@ def augment_image(
     flip_horizontal: bool = False,
     gaussian_noise_std: Optional[float] = 0.0,
     brightness_range: float = 0.0,
-    blur_sigma: Optional[float] = None
+    blur_sigma: Optional[float] = None,
 ) -> np.ndarray:
     """
     Apply random augmentations to a single image.
-    
+
     Args:
         image: Input image of shape (H, W)
         rotation_range: Maximum rotation angle in degrees
@@ -26,50 +26,52 @@ def augment_image(
         gaussian_noise_std: Standard deviation of Gaussian noise (None to disable)
         brightness_range: Range for brightness adjustment (0-1)
         blur_sigma: Gaussian blur sigma (None to disable)
-    
+
     Returns:
         Augmented image
     """
     aug_image = image.copy()
-    
+
     # Store original image range for proper clipping
     # This preserves the data distribution after augmentations
     img_min = image.min()
     img_max = image.max()
-    
+
     # Random rotation
     if rotation_range > 0:
         angle = np.random.uniform(-rotation_range, rotation_range)
-        aug_image = rotate(aug_image, angle, reshape=False, mode='reflect')
-    
+        aug_image = rotate(aug_image, angle, reshape=False, mode="reflect")
+
     # Random translation
     if translation_range > 0:
         shift_x = np.random.uniform(-translation_range, translation_range)
         shift_y = np.random.uniform(-translation_range, translation_range)
-        aug_image = shift(aug_image, (shift_y, shift_x), mode='reflect')
-    
+        aug_image = shift(aug_image, (shift_y, shift_x), mode="reflect")
+
     # Random horizontal flip
     if flip_horizontal and np.random.random() < 0.5:
         aug_image = np.fliplr(aug_image)
-    
+
     # Gaussian noise
     if gaussian_noise_std is not None and gaussian_noise_std > 0:
         noise = np.random.normal(0, gaussian_noise_std, aug_image.shape)
         aug_image = aug_image + noise
         # Clip to original image range to preserve data distribution
         aug_image = np.clip(aug_image, img_min, img_max)
-    
+
     # Brightness adjustment
     if brightness_range > 0:
-        brightness_factor = np.random.uniform(1 - brightness_range, 1 + brightness_range)
+        brightness_factor = np.random.uniform(
+            1 - brightness_range, 1 + brightness_range
+        )
         aug_image = aug_image * brightness_factor
         # Clip to original image range to preserve data distribution
         aug_image = np.clip(aug_image, img_min, img_max)
-    
+
     # Gaussian blur
     if blur_sigma is not None and blur_sigma > 0:
         aug_image = gaussian_filter(aug_image, sigma=blur_sigma)
-    
+
     return aug_image
 
 
@@ -81,27 +83,26 @@ def augment_dataset(
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Create augmented dataset.
-    
+
     Args:
         X: Images of shape (N, H, W)
         y: Labels of shape (N,)
         augmentation_factor: Factor by which to multiply dataset size (1.0 = same size)
         **augmentation_kwargs: Arguments passed to augment_image
-    
+
     Returns:
         Augmented images and labels
     """
     n_samples = len(X)
     n_augmented = int(n_samples * augmentation_factor)
-    
+
     # Select indices to augment (with replacement if needed)
     if n_augmented <= n_samples:
         indices = np.random.choice(n_samples, size=n_augmented, replace=False)
     else:
         indices = np.random.choice(n_samples, size=n_augmented, replace=True)
-    
+
     X_aug = np.array([augment_image(X[i], **augmentation_kwargs) for i in indices])
     y_aug = y[indices]
-    
-    return X_aug, y_aug
 
+    return X_aug, y_aug

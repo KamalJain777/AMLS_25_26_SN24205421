@@ -11,7 +11,7 @@ from sklearn.metrics import (
     recall_score,
     f1_score,
     confusion_matrix,
-    roc_auc_score
+    roc_auc_score,
 )
 import json
 from pathlib import Path
@@ -21,20 +21,20 @@ import csv
 def evaluate_model_b(
     model: nn.Module,
     test_loader: DataLoader,
-    device: str = 'cpu',
-    split: str = 'test',
-    print_results: bool = True
+    device: str = "cpu",
+    split: str = "test",
+    print_results: bool = True,
 ) -> Dict[str, Any]:
     """
     Evaluate Model B on a dataset.
-    
+
     Args:
         model: Trained model
         test_loader: Data loader for test set
         device: Device ('cpu' or 'cuda')
         split: Name of the split ('train', 'val', 'test')
         print_results: Whether to print metrics
-    
+
     Returns:
         Dictionary containing metrics, predictions, and probabilities
     """
@@ -42,42 +42,46 @@ def evaluate_model_b(
     all_preds = []
     all_labels = []
     all_probs = []
-    
+
     with torch.no_grad():
         for images, labels in test_loader:
             images = images.to(device)
             outputs = model(images)
-            
+
             # Get predictions
             probs = torch.softmax(outputs, dim=1)
             _, preds = torch.max(outputs, 1)
-            
+
             all_preds.extend(preds.cpu().numpy())
             all_labels.extend(labels.numpy())
             all_probs.extend(probs.cpu().numpy())
-    
+
     # Convert to numpy arrays
     y_true = np.array(all_labels)
     y_pred = np.array(all_preds)
     y_proba = np.array(all_probs)
-    
+
     # Compute metrics
     metrics = {
-        'accuracy': float(accuracy_score(y_true, y_pred)),
-        'precision': float(precision_score(y_true, y_pred, average='binary', zero_division=0)),
-        'recall': float(recall_score(y_true, y_pred, average='binary', zero_division=0)),
-        'f1_score': float(f1_score(y_true, y_pred, average='binary', zero_division=0))
+        "accuracy": float(accuracy_score(y_true, y_pred)),
+        "precision": float(
+            precision_score(y_true, y_pred, average="binary", zero_division=0)
+        ),
+        "recall": float(
+            recall_score(y_true, y_pred, average="binary", zero_division=0)
+        ),
+        "f1_score": float(f1_score(y_true, y_pred, average="binary", zero_division=0)),
     }
-    
+
     # Compute AUC
     try:
-        metrics['roc_auc'] = float(roc_auc_score(y_true, y_proba[:, 1]))
+        metrics["roc_auc"] = float(roc_auc_score(y_true, y_proba[:, 1]))
     except ValueError:
-        metrics['roc_auc'] = 0.0
-    
+        metrics["roc_auc"] = 0.0
+
     # Compute confusion matrix
     cm = confusion_matrix(y_true, y_pred)
-    
+
     # Print results
     if print_results:
         print(f"\n{split.upper()} Set Metrics:")
@@ -87,23 +91,19 @@ def evaluate_model_b(
         print("-" * 40)
         print(f"\nConfusion Matrix ({split}):")
         print(cm)
-    
+
     return {
-        'metrics': metrics,
-        'predictions': y_pred.tolist(),
-        'probabilities': y_proba.tolist(),
-        'confusion_matrix': cm.tolist()
+        "metrics": metrics,
+        "predictions": y_pred.tolist(),
+        "probabilities": y_proba.tolist(),
+        "confusion_matrix": cm.tolist(),
     }
 
 
-def save_results(
-    results: Dict[str, Any],
-    output_path: str,
-    format: str = "json"
-):
+def save_results(results: Dict[str, Any], output_path: str, format: str = "json"):
     """
     Save evaluation results to file.
-    
+
     Args:
         results: Dictionary of results to save
         output_path: Path to output file
@@ -111,7 +111,7 @@ def save_results(
     """
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    
+
     if format == "json":
         # Convert numpy types to native Python types for JSON serialization
         def convert_to_serializable(obj):
@@ -122,22 +122,22 @@ def save_results(
             elif isinstance(obj, np.ndarray):
                 return obj.tolist()
             elif isinstance(obj, dict):
-                return {key: convert_to_serializable(value) for key, value in obj.items()}
+                return {
+                    key: convert_to_serializable(value) for key, value in obj.items()
+                }
             elif isinstance(obj, list):
                 return [convert_to_serializable(item) for item in obj]
             return obj
-        
+
         serializable_results = convert_to_serializable(results)
-        with open(output_path, 'w') as f:
+        with open(output_path, "w") as f:
             json.dump(serializable_results, f, indent=2)
     else:
         raise ValueError(f"Unknown format: {format}. Use 'json'.")
 
 
 def save_history(
-    history: Dict[str, Any],
-    output_path: str,
-    format: str = "csv"
+    history: Dict[str, Any], output_path: str, format: str = "csv"
 ) -> None:
     """
     Save training history to disk.
@@ -159,7 +159,9 @@ def save_history(
         raise ValueError(f"Unknown format: {format}. Use 'csv' or 'json'.")
 
     # Normalize lengths
-    keys = [k for k in ["train_loss", "train_acc", "val_loss", "val_acc"] if k in history]
+    keys = [
+        k for k in ["train_loss", "train_acc", "val_loss", "val_acc"] if k in history
+    ]
     n = max((len(history.get(k, [])) for k in keys), default=0)
 
     with open(output_path, "w", newline="") as f:
@@ -176,7 +178,7 @@ def save_history(
 def compare_augmentation_b(
     results_without_aug: Dict[str, Any],
     results_with_aug: Dict[str, Any],
-    output_path: Optional[str] = None
+    output_path: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     """
     Create a simple comparison table between augmentation OFF vs ON.
@@ -196,11 +198,12 @@ def compare_augmentation_b(
     if output_path and rows:
         out = Path(output_path)
         out.parent.mkdir(parents=True, exist_ok=True)
-        fieldnames = ["augmentation", "split"] + [k for k in rows[0].keys() if k not in ["augmentation", "split"]]
+        fieldnames = ["augmentation", "split"] + [
+            k for k in rows[0].keys() if k not in ["augmentation", "split"]
+        ]
         with open(out, "w", newline="") as f:
             writer = csv.DictWriter(f, fieldnames=fieldnames)
             writer.writeheader()
             writer.writerows(rows)
 
     return rows
-

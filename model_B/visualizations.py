@@ -9,6 +9,7 @@ import numpy as np
 
 # Set non-interactive backend for matplotlib to avoid tkinter errors
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -61,7 +62,11 @@ def plot_sample_images(
     if len(indices) < n_samples:
         remaining = np.setdiff1d(np.arange(len(images)), np.array(indices, dtype=int))
         if len(remaining) > 0:
-            extra = np.random.choice(remaining, size=min(n_samples - len(indices), len(remaining)), replace=False)
+            extra = np.random.choice(
+                remaining,
+                size=min(n_samples - len(indices), len(remaining)),
+                replace=False,
+            )
             indices.extend(extra.tolist())
     indices = indices[:n_samples]
 
@@ -75,7 +80,9 @@ def plot_sample_images(
         # Display-friendly scaling
         img_disp = img.copy()
         if img_disp.min() < 0:  # z-score
-            img_disp = (img_disp - img_disp.min()) / (img_disp.max() - img_disp.min() + 1e-8)
+            img_disp = (img_disp - img_disp.min()) / (
+                img_disp.max() - img_disp.min() + 1e-8
+            )
         elif img_disp.max() <= 1.0:  # minmax
             img_disp = img_disp
         else:
@@ -119,7 +126,9 @@ def plot_class_distribution(
     ax.bar(x, [val_c.get(c, 0) for c in classes], width, label="Val")
     ax.bar(x + width, [test_c.get(c, 0) for c in classes], width, label="Test")
     ax.set_xticks(x)
-    ax.set_xticklabels([class_names[c] if c < len(class_names) else str(c) for c in classes])
+    ax.set_xticklabels(
+        [class_names[c] if c < len(class_names) else str(c) for c in classes]
+    )
     ax.set_title("Class Distribution (Model B)")
     ax.set_ylabel("Count")
     ax.legend()
@@ -130,7 +139,9 @@ def plot_class_distribution(
     plt.close()
 
 
-def plot_training_curves(history: Dict[str, List[float]], save_path: Optional[Path] = None) -> None:
+def plot_training_curves(
+    history: Dict[str, List[float]], save_path: Optional[Path] = None
+) -> None:
     """Plot train/val loss and accuracy curves from trainer history."""
     fig, axes = plt.subplots(1, 2, figsize=(12, 4))
 
@@ -291,4 +302,3 @@ def plot_augmentation_comparison(
         _ensure_dir(save_path)
         plt.savefig(save_path, bbox_inches="tight", dpi=150)
     plt.close()
-

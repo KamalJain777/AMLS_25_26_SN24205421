@@ -6,9 +6,11 @@ from pathlib import Path
 import numpy as np
 import torch
 import yaml
+
 # Set non-interactive backend for matplotlib to avoid tkinter errors
 import matplotlib
-matplotlib.use('Agg')  # Use non-interactive backend
+
+matplotlib.use("Agg")  # Use non-interactive backend
 import matplotlib.pyplot as plt
 from typing import Dict, Any, Optional
 from dataclasses import dataclass
@@ -22,15 +24,16 @@ from model_A import (
     train_model_a,
     evaluate_model_a,
     compare_feature_modes,
-    compare_augmentation
+    compare_augmentation,
 )
 from model_A.augmentation import augment_dataset
 from model_B import (
     get_breastmnist_dataloaders,
     ModelBNet,
     train_model_b,
-    evaluate_model_b
+    evaluate_model_b,
 )
+
 
 def _safe_get(d: Dict[str, Any], path: str, default=None):
     cur: Any = d
@@ -46,6 +49,7 @@ def _safe_get(d: Dict[str, Any], path: str, default=None):
 # (merged from comparison_visualizations.py)
 # ==========================
 
+
 @dataclass
 class _ModelResultForComparison:
     name: str
@@ -55,7 +59,9 @@ class _ModelResultForComparison:
     test_probabilities: Optional[np.ndarray]  # shape (N, 2) if available
 
 
-def _pick_model_a_variant_for_comparison(model_a_json: Dict[str, Any]) -> tuple[str, Dict[str, Any]]:
+def _pick_model_a_variant_for_comparison(
+    model_a_json: Dict[str, Any],
+) -> tuple[str, Dict[str, Any]]:
     """Pick the best (highest test roc_auc) feature mode for Model A."""
     if model_a_json.get("run_type") == "feature_comparison":
         results_by_mode = model_a_json.get("results_by_mode", {})
@@ -76,7 +82,9 @@ def _pick_model_a_variant_for_comparison(model_a_json: Dict[str, Any]) -> tuple[
     return "default", model_a_json
 
 
-def _pick_model_b_variant_for_comparison(model_b_json: Dict[str, Any]) -> tuple[str, Dict[str, Any]]:
+def _pick_model_b_variant_for_comparison(
+    model_b_json: Dict[str, Any],
+) -> tuple[str, Dict[str, Any]]:
     """Pick the with-augmentation variant if available."""
     if model_b_json.get("run_type") == "augmentation_ablation":
         with_aug = model_b_json.get("with_augmentation", None)
@@ -85,7 +93,9 @@ def _pick_model_b_variant_for_comparison(model_b_json: Dict[str, Any]) -> tuple[
         without_aug = model_b_json.get("without_augmentation", None)
         if isinstance(without_aug, dict):
             return "without_augmentation", without_aug
-    if model_b_json.get("run_type") == "single_run" and isinstance(model_b_json.get("run"), dict):
+    if model_b_json.get("run_type") == "single_run" and isinstance(
+        model_b_json.get("run"), dict
+    ):
         return "single_run", model_b_json["run"]
     return "default", model_b_json
 
@@ -94,7 +104,11 @@ def _load_model_comparison_inputs(
     base_out_dir: Path,
     data_dir: Path = Path("Datasets"),
     random_state: int = 42,
-) -> tuple[Optional[_ModelResultForComparison], Optional[_ModelResultForComparison], Optional[np.ndarray]]:
+) -> tuple[
+    Optional[_ModelResultForComparison],
+    Optional[_ModelResultForComparison],
+    Optional[np.ndarray],
+]:
     """Load Model A and Model B test outputs, plus y_test labels."""
     import json
 
@@ -137,7 +151,9 @@ def _load_model_comparison_inputs(
             name="Model B",
             variant=f"test ({b_var})",
             test_metrics={k: float(v) for k, v in (b_metrics or {}).items()},
-            test_confusion_matrix=np.array(b_cm if b_cm is not None else [[0, 0], [0, 0]]),
+            test_confusion_matrix=np.array(
+                b_cm if b_cm is not None else [[0, 0], [0, 0]]
+            ),
             test_probabilities=np.array(b_probs) if b_probs is not None else None,
         )
 
@@ -157,7 +173,9 @@ def _load_model_comparison_inputs(
     return a, b, y_test
 
 
-def _plot_model_comparison_metrics(a: _ModelResultForComparison, b: _ModelResultForComparison, save_path: Path) -> None:
+def _plot_model_comparison_metrics(
+    a: _ModelResultForComparison, b: _ModelResultForComparison, save_path: Path
+) -> None:
     keys = ["accuracy", "precision", "recall", "f1_score", "roc_auc"]
     a_vals = [float(a.test_metrics.get(k, 0.0)) for k in keys]
     b_vals = [float(b.test_metrics.get(k, 0.0)) for k in keys]
@@ -213,7 +231,9 @@ def _plot_model_comparison_roc_curves(
 
     if a.test_probabilities is None or b.test_probabilities is None:
         raise ValueError("Missing probabilities for ROC curves.")
-    if len(y_test) != len(a.test_probabilities) or len(y_test) != len(b.test_probabilities):
+    if len(y_test) != len(a.test_probabilities) or len(y_test) != len(
+        b.test_probabilities
+    ):
         raise ValueError("y_test length does not match probabilities length.")
 
     fpr_a, tpr_a, _ = roc_curve(y_test, a.test_probabilities[:, 1])
@@ -240,7 +260,9 @@ def _generate_model_comparison_visualizations(
     data_dir: Path = Path("Datasets"),
     random_state: int = 42,
 ) -> Dict[str, Optional[str]]:
-    a, b, y_test = _load_model_comparison_inputs(base_out_dir, data_dir=data_dir, random_state=random_state)
+    a, b, y_test = _load_model_comparison_inputs(
+        base_out_dir, data_dir=data_dir, random_state=random_state
+    )
     if a is None or b is None:
         return {"error": "Missing Model A or Model B results."}
 
@@ -285,6 +307,7 @@ def _load_json_if_exists(path: Path) -> Optional[Dict[str, Any]]:
     if not path.exists():
         return None
     import json
+
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
 
@@ -386,7 +409,12 @@ def write_comparison_summary(base_out_dir: Path) -> Optional[Path]:
             "",
         ]
     else:
-        lines += ["## Model A (Classical ML) — Test Metrics", "", "_No Model A results found._", ""]
+        lines += [
+            "## Model A (Classical ML) — Test Metrics",
+            "",
+            "_No Model A results found._",
+            "",
+        ]
 
     if b_metrics:
         lines += [
@@ -396,7 +424,12 @@ def write_comparison_summary(base_out_dir: Path) -> Optional[Path]:
             "",
         ]
     else:
-        lines += ["## Model B (Deep Learning) — Test Metrics", "", "_No Model B results found._", ""]
+        lines += [
+            "## Model B (Deep Learning) — Test Metrics",
+            "",
+            "_No Model B results found._",
+            "",
+        ]
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -423,6 +456,7 @@ def convert_to_serializable(obj):
 def write_json(path: Path, data: Any, indent: int = 2) -> None:
     """Write JSON to disk, ensuring parent directories exist."""
     import json
+
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
@@ -443,20 +477,20 @@ def remove_if_exists(path: Path) -> None:
 def load_config(config_path: str) -> Dict[str, Any]:
     """
     Load configuration from YAML file.
-    
+
     Args:
         config_path: Path to YAML configuration file
-    
+
     Returns:
         Dictionary containing configuration
     """
     config_path = Path(config_path)
     if not config_path.exists():
         raise FileNotFoundError(f"Configuration file not found: {config_path}")
-    
-    with open(config_path, 'r') as f:
+
+    with open(config_path, "r") as f:
         config = yaml.safe_load(f)
-    
+
     return config
 
 
@@ -465,11 +499,11 @@ def visualize_samples(
     labels: np.ndarray,
     class_names: list = ["Benign", "Malignant"],
     n_samples: int = 5,
-    save_path: Optional[str] = None
+    save_path: Optional[str] = None,
 ):
     """
     Visualize sample images from each class.
-    
+
     Args:
         images: Images array of shape (N, H, W)
         labels: Labels array of shape (N,)
@@ -478,46 +512,50 @@ def visualize_samples(
         save_path: Optional path to save figure
     """
     num_classes = len(class_names)
-    fig, axes = plt.subplots(num_classes, n_samples, figsize=(n_samples * 2, num_classes * 2))
-    
+    fig, axes = plt.subplots(
+        num_classes, n_samples, figsize=(n_samples * 2, num_classes * 2)
+    )
+
     if num_classes == 1:
         axes = axes.reshape(1, -1)
-    
+
     for class_idx in range(num_classes):
         class_mask = labels == class_idx
         class_images = images[class_mask]
-        
+
         if len(class_images) == 0:
             continue
-        
+
         # Select random samples
         n_available = min(n_samples, len(class_images))
         indices = np.random.choice(len(class_images), size=n_available, replace=False)
-        
+
         for i, idx in enumerate(indices):
             ax = axes[class_idx, i]
             img = class_images[idx]
-            
+
             # Denormalize if needed (assuming z-score normalization)
             # This is a simple approach - may need adjustment based on actual normalization
             if img.min() < -1 or img.max() > 1:
                 # Likely normalized, try to denormalize for visualization
-                img_vis = np.clip((img - img.min()) / (img.max() - img.min() + 1e-8), 0, 1)
+                img_vis = np.clip(
+                    (img - img.min()) / (img.max() - img.min() + 1e-8), 0, 1
+                )
             else:
                 img_vis = img
-            
-            ax.imshow(img_vis, cmap='gray')
-            ax.axis('off')
+
+            ax.imshow(img_vis, cmap="gray")
+            ax.axis("off")
             if i == 0:
                 ax.set_ylabel(class_names[class_idx], fontsize=12)
-    
+
     plt.tight_layout()
-    
+
     if save_path:
-        plt.savefig(save_path, dpi=150, bbox_inches='tight')
+        plt.savefig(save_path, dpi=150, bbox_inches="tight")
         print(f"Visualization saved to: {save_path}")
     # Note: Using Agg backend (non-interactive), so plt.show() is not needed
-    
+
     plt.close()
 
 
@@ -537,74 +575,66 @@ def run_model_a(args):
     print("=" * 80)
     print("Model A: Classical ML (SVM)")
     print("=" * 80)
-    
+
     # Load configuration
     if args.config:
         config = load_config(args.config)
-        model_config = config.get('model', {})
-        feature_config = config.get('features', {})
-        data_config = config.get('data', {})
-        random_state = config.get('random_state', 42)
+        model_config = config.get("model", {})
+        feature_config = config.get("features", {})
+        data_config = config.get("data", {})
+        random_state = config.get("random_state", 42)
     else:
         # Default configuration (with GridSearchCV enabled)
-        model_config = {
-            'use_grid_search': True,
-            'cv': 5,
-            'verbose': 2
-        }
-        feature_config = {'mode': args.feature_mode if args.feature_mode else 'raw'}
+        model_config = {"use_grid_search": True, "cv": 5, "verbose": 2}
+        feature_config = {"mode": args.feature_mode if args.feature_mode else "raw"}
         data_config = {
-            'train_fraction': args.train_fraction,
-            'val_fraction': args.val_fraction,
-            'normalize': True
+            "train_fraction": args.train_fraction,
+            "val_fraction": args.val_fraction,
+            "normalize": True,
         }
         random_state = 42
-    
+
     set_random_seeds(random_state)
-    
+
     # Load dataset
     print("\nLoading BreastMNIST dataset...")
     dataset = BreastMNISTDataset(
         data_dir=args.data_dir,
-        normalize=data_config.get('normalize', True),
-        normalize_mode='zscore',
-        random_state=random_state
+        normalize=data_config.get("normalize", True),
+        normalize_mode="zscore",
+        random_state=random_state,
     )
-    
+
     # Summarize dataset
     dataset.summarize()
-    
+
     # Get data splits
-    train_fraction = data_config.get('train_fraction', args.train_fraction)
-    val_fraction = data_config.get('val_fraction', args.val_fraction)
-    
+    train_fraction = data_config.get("train_fraction", args.train_fraction)
+    val_fraction = data_config.get("val_fraction", args.val_fraction)
+
     X_train, y_train, X_val, y_val, X_test, y_test = dataset.get_all_splits(
-        train_fraction=train_fraction,
-        val_fraction=val_fraction
+        train_fraction=train_fraction, val_fraction=val_fraction
     )
-    
+
     # Create output directory if it doesn't exist
     if args.out_dir:
         args.out_dir.mkdir(parents=True, exist_ok=True)
-    
+
     # Visualize input data
     if args.out_dir:
         from model_A.visualizations import plot_sample_images, plot_class_distribution
-        
+
         print("\nGenerating input data visualizations...")
         # Plot sample images
         plot_sample_images(
-            X_train, y_train,
-            n_samples=9,
-            save_path=args.out_dir / 'sample_images.png'
+            X_train, y_train, n_samples=9, save_path=args.out_dir / "sample_images.png"
         )
-        
+
         # Plot class distribution
         plot_class_distribution(
-            y_train, y_val, y_test,
-            save_path=args.out_dir / 'class_distribution.png'
+            y_train, y_val, y_test, save_path=args.out_dir / "class_distribution.png"
         )
-    
+
     # Visualize samples if requested (legacy function)
     if args.show_examples:
         print("\nVisualizing sample images...")
@@ -612,376 +642,401 @@ def run_model_a(args):
             X_train,
             y_train,
             n_samples=5,
-            save_path=args.out_dir / 'sample_images_legacy.png' if args.out_dir else None
+            save_path=(
+                args.out_dir / "sample_images_legacy.png" if args.out_dir else None
+            ),
         )
-    
+
     # Feature extraction
-    feature_mode = feature_config.get('mode', args.feature_mode if args.feature_mode else 'raw')
-    
+    feature_mode = feature_config.get(
+        "mode", args.feature_mode if args.feature_mode else "raw"
+    )
+
     # By default, compare all features (raw vs processed) for rubric requirement
     # This satisfies the requirement to compare performance between raw and processed features
     # User can override with --feature_mode <specific_mode> to test a single mode
-    should_compare_features = (
-        args.compare_all_features or ((args.feature_mode is None) and not args.single_feature_mode)
+    should_compare_features = args.compare_all_features or (
+        (args.feature_mode is None) and not args.single_feature_mode
     )
-
 
     # If we're NOT generating comparisons this run, remove comparison outputs so the
     # results directory doesn't show stale PNG/CSV/JSON from a previous run.
     if args.out_dir and not should_compare_features:
         for filename in [
-            'feature_comparison_results.csv',
-            'feature_comparison_detailed.json',
-            'confusion_matrices.png',
-            'metrics_comparison.png',
-            'feature_comparison_table.png',
-            'roc_curves.png',
-            'augmentation_comparison_results.csv',
-            'augmentation_comparison_detailed.json',
-            'augmentation_comparison.png',
-            'augmentation_confusion_matrices.png',
-            'augmentation_roc_curves.png',
+            "feature_comparison_results.csv",
+            "feature_comparison_detailed.json",
+            "confusion_matrices.png",
+            "metrics_comparison.png",
+            "feature_comparison_table.png",
+            "roc_curves.png",
+            "augmentation_comparison_results.csv",
+            "augmentation_comparison_detailed.json",
+            "augmentation_comparison.png",
+            "augmentation_confusion_matrices.png",
+            "augmentation_roc_curves.png",
         ]:
             remove_if_exists(args.out_dir / filename)
-    
+
     if should_compare_features:
         # Compare all feature modes (raw vs processed features)
         print("\n" + "=" * 80)
         print("Feature Comparison: Raw vs Processed Features")
         print("=" * 80)
-        print("Comparing performance between raw and processed features as per rubric requirement:")
+        print(
+            "Comparing performance between raw and processed features as per rubric requirement:"
+        )
         print("  • Raw features: Flattened pixel values (baseline)")
-        print("  • PCA features: Dimensionality-reduced representation via Principal Component Analysis")
-        print("  • HOG features: Histogram of Oriented Gradients (edge/texture-based representation)")
+        print(
+            "  • PCA features: Dimensionality-reduced representation via Principal Component Analysis"
+        )
+        print(
+            "  • HOG features: Histogram of Oriented Gradients (edge/texture-based representation)"
+        )
         print("=" * 80)
-        
-        feature_modes = ['raw', 'pca', 'hog']
+
+        feature_modes = ["raw", "pca", "hog"]
         all_results = {}
-        
+
         for mode in feature_modes:
             print(f"\n{'=' * 80}")
             print(f"Feature Mode: {mode.upper()}")
             print(f"{'=' * 80}")
-            
+
             # Extract features (fit on train only; transform val/test)
             extractor = FeatureExtractor(
                 mode=mode,
-                pca_components=feature_config.get('pca_components', 64),
-                standardize_features=feature_config.get('standardize', False)
+                pca_components=feature_config.get("pca_components", 64),
+                standardize_features=feature_config.get("standardize", False),
             )
             X_train_feat = extractor.fit_transform(X_train)
             X_val_feat = extractor.transform(X_val)
             X_test_feat = extractor.transform(X_test)
-            
+
             # Print feature dimension information
             original_dim = X_train.shape[1] * X_train.shape[2]  # 28 * 28 = 784
             feature_dim = X_train_feat.shape[1]
-            reduction = ((original_dim - feature_dim) / original_dim * 100) if feature_dim < original_dim else 0
-            print(f"Feature dimensions: {feature_dim} (from {original_dim} original pixels)")
+            reduction = (
+                ((original_dim - feature_dim) / original_dim * 100)
+                if feature_dim < original_dim
+                else 0
+            )
+            print(
+                f"Feature dimensions: {feature_dim} (from {original_dim} original pixels)"
+            )
             if reduction > 0:
                 print(f"Dimensionality reduction: {reduction:.1f}%")
-            
+
             # Train model
             # Combine configs for trainer (model config should be nested)
             # Update mode in config to match the actual feature mode being used
             trainer_config = {
-                'model': model_config,
+                "model": model_config,
                 **feature_config,
                 **data_config,
-                'mode': mode,  # Ensure config reflects the actual feature mode
-                'random_state': random_state
+                "mode": mode,  # Ensure config reflects the actual feature mode
+                "random_state": random_state,
             }
             train_result = train_model_a(
-                X_train_feat, y_train,
-                X_val_feat, y_val,
-                X_test_feat, y_test,
+                X_train_feat,
+                y_train,
+                X_val_feat,
+                y_val,
+                X_test_feat,
+                y_test,
                 config=trainer_config,
-                feature_mode=mode
+                feature_mode=mode,
             )
-            
-            all_results[mode] = train_result['results']
-        
+
+            all_results[mode] = train_result["results"]
+
         # Compare results and save
         comparison_output = (
-            args.out_dir / 'feature_comparison_results.csv' if args.out_dir 
-            else Path('Datasets/feature_comparison_results.csv')
+            args.out_dir / "feature_comparison_results.csv"
+            if args.out_dir
+            else Path("Datasets/feature_comparison_results.csv")
         )
-        compare_feature_modes(
-            all_results,
-            output_path=comparison_output
-        )
-        
+        compare_feature_modes(all_results, output_path=comparison_output)
+
         # Generate evaluation visualizations
         if args.out_dir:
             from model_A.visualizations import (
                 plot_confusion_matrices,
                 plot_metrics_comparison,
-                plot_feature_comparison_table
+                plot_feature_comparison_table,
             )
-            
+
             print("\nGenerating evaluation metric visualizations...")
             # Plot confusion matrices
             plot_confusion_matrices(
-                all_results,
-                save_path=args.out_dir / 'confusion_matrices.png'
+                all_results, save_path=args.out_dir / "confusion_matrices.png"
             )
-            
+
             # Plot metrics comparison
             plot_metrics_comparison(
-                all_results,
-                save_path=args.out_dir / 'metrics_comparison.png'
+                all_results, save_path=args.out_dir / "metrics_comparison.png"
             )
-            
+
             # Plot feature comparison table
             plot_feature_comparison_table(
-                all_results,
-                save_path=args.out_dir / 'feature_comparison_table.png'
+                all_results, save_path=args.out_dir / "feature_comparison_table.png"
             )
-            
+
             # Plot ROC curves if probabilities are available
             try:
                 y_true_dict = {}
                 y_proba_dict = {}
                 for mode, results in all_results.items():
-                    if 'test' in results and 'probabilities' in results['test']:
+                    if "test" in results and "probabilities" in results["test"]:
                         y_true_dict[mode] = y_test
-                        y_proba_dict[mode] = np.array(results['test']['probabilities'])
-                
+                        y_proba_dict[mode] = np.array(results["test"]["probabilities"])
+
                 if y_true_dict and y_proba_dict:
                     from model_A.visualizations import plot_roc_curves
+
                     plot_roc_curves(
                         y_true_dict,
                         y_proba_dict,
-                        save_path=args.out_dir / 'roc_curves.png'
+                        save_path=args.out_dir / "roc_curves.png",
                     )
             except Exception as e:
                 print(f"Note: Could not generate ROC curves: {e}")
-        
+
         # Also save detailed results for each feature mode
         if args.out_dir:
-            detailed_results_path = args.out_dir / 'feature_comparison_detailed.json'
+            detailed_results_path = args.out_dir / "feature_comparison_detailed.json"
             write_json(detailed_results_path, all_results)
             print(f"\nDetailed comparison results saved to: {detailed_results_path}")
 
             # Also always update a single "Model A results" file so it doesn't look stale
             # when running comparisons.
-            model_a_results_path = args.out_dir / 'model_A_results.json'
+            model_a_results_path = args.out_dir / "model_A_results.json"
             write_json(
                 model_a_results_path,
                 {
-                    'run_type': 'feature_comparison',
-                    'results_by_mode': all_results,
-                    'config': {
-                        'model': model_config,
-                        'features': feature_config,
-                        'data': data_config,
-                        'random_state': random_state
-                    }
-                }
+                    "run_type": "feature_comparison",
+                    "results_by_mode": all_results,
+                    "config": {
+                        "model": model_config,
+                        "features": feature_config,
+                        "data": data_config,
+                        "random_state": random_state,
+                    },
+                },
             )
             print(f"\nModel A summary saved to: {model_a_results_path}")
-        
+
         # Augmentation comparison: Compare performance with and without augmentation
         # Use 'raw' features as baseline for augmentation comparison
         print("\n" + "=" * 80)
         print("Augmentation Comparison: Without vs With Data Augmentation")
         print("=" * 80)
-        print("Comparing performance with and without data augmentation using PCA features...")
+        print(
+            "Comparing performance with and without data augmentation using PCA features..."
+        )
         print("=" * 80)
-        
+
         # Get augmentation config
-        aug_config = config.get('augmentation', {}) if args.config else {}
-        aug_enabled_default = aug_config.get('enabled', False)
-        
+        aug_config = config.get("augmentation", {}) if args.config else {}
+        aug_enabled_default = aug_config.get("enabled", False)
+
         # Extract 'pca' features for augmentation comparison
         extractor_raw = FeatureExtractor(
-            mode='pca',
-            pca_components=feature_config.get('pca_components', 64),
-            standardize_features=feature_config.get('standardize', False)
+            mode="pca",
+            pca_components=feature_config.get("pca_components", 64),
+            standardize_features=feature_config.get("standardize", False),
         )
-        
+
         # Extract features from original (non-augmented) data
         X_train_raw = extractor_raw.fit_transform(X_train)
         X_val_raw = extractor_raw.transform(X_val)
         X_test_raw = extractor_raw.transform(X_test)
-        
+
         # Train WITHOUT augmentation
         print("\n" + "-" * 80)
         print("Training WITHOUT augmentation...")
         print("-" * 80)
         trainer_config_no_aug = {
-            'model': model_config,
+            "model": model_config,
             **feature_config,
             **data_config,
-            'mode': 'pca',
-            'augmentation': {'enabled': False},
-            'random_state': random_state
+            "mode": "pca",
+            "augmentation": {"enabled": False},
+            "random_state": random_state,
         }
         train_result_no_aug = train_model_a(
-            X_train_raw, y_train,
-            X_val_raw, y_val,
-            X_test_raw, y_test,
+            X_train_raw,
+            y_train,
+            X_val_raw,
+            y_val,
+            X_test_raw,
+            y_test,
             config=trainer_config_no_aug,
-            feature_mode='pca'
+            feature_mode="pca",
         )
-        results_no_aug = train_result_no_aug['results']
-        
+        results_no_aug = train_result_no_aug["results"]
+
         # Train WITH augmentation (apply augmentation to images BEFORE feature extraction)
         print("\n" + "-" * 80)
         print("Training WITH augmentation...")
         print("-" * 80)
-        
+
         # Apply augmentation to training images
-        aug_factor = aug_config.get('augmentation_factor', 1.0)
+        aug_factor = aug_config.get("augmentation_factor", 1.0)
         aug_kwargs = {
-            'rotation_range': aug_config.get('rotation_range', 5.0),
-            'translation_range': aug_config.get('translation_range', 1.0),
-            'flip_horizontal': aug_config.get('flip_horizontal', False),
-            'gaussian_noise_std': aug_config.get('gaussian_noise_std', 0.0),
-            'brightness_range': aug_config.get('brightness_range', 0.0),
-            'blur_sigma': aug_config.get('blur_sigma', None)
+            "rotation_range": aug_config.get("rotation_range", 5.0),
+            "translation_range": aug_config.get("translation_range", 1.0),
+            "flip_horizontal": aug_config.get("flip_horizontal", False),
+            "gaussian_noise_std": aug_config.get("gaussian_noise_std", 0.0),
+            "brightness_range": aug_config.get("brightness_range", 0.0),
+            "blur_sigma": aug_config.get("blur_sigma", None),
         }
 
-        
         print(f"Applying augmentation to training set...")
         print(f"Augmentation parameters: {aug_kwargs}")
         print(f"Original training samples: {len(X_train)}")
-        
+
         X_train_aug, y_train_aug = augment_dataset(
-            X_train, y_train,
-            augmentation_factor=aug_factor,
-            **aug_kwargs
+            X_train, y_train, augmentation_factor=aug_factor, **aug_kwargs
         )
         print(f"Augmented training samples: {len(X_train_aug)}")
-
 
         # Combine original + augmented samples (augmentation should ADD data, not replace it)
         X_train_mix = np.concatenate([X_train, X_train_aug], axis=0)
         y_train_mix = np.concatenate([y_train, y_train_aug], axis=0)
         print(f"Total training samples after mixing: {len(X_train_mix)}")
 
-        
         # Extract features from augmented data
         # Need to refit extractor on the mixed data
         extractor_aug = FeatureExtractor(
-            mode='pca',
-            pca_components=feature_config.get('pca_components', 64),
-            standardize_features=feature_config.get('standardize', False)
+            mode="pca",
+            pca_components=feature_config.get("pca_components", 64),
+            standardize_features=feature_config.get("standardize", False),
         )
         X_train_aug_feat = extractor_aug.fit_transform(X_train_mix)
         # Use same extractor for val/test (no augmentation)
         X_val_aug_feat = extractor_aug.transform(X_val)
         X_test_aug_feat = extractor_aug.transform(X_test)
-        
+
         trainer_config_with_aug = {
-            'model': model_config,
+            "model": model_config,
             **feature_config,
             **data_config,
-            'mode': 'pca',
-            'augmentation': {'enabled': True, **aug_config},
-            'random_state': random_state
+            "mode": "pca",
+            "augmentation": {"enabled": True, **aug_config},
+            "random_state": random_state,
         }
         train_result_with_aug = train_model_a(
-            X_train_aug_feat, y_train_mix,
-            X_val_aug_feat, y_val,
-            X_test_aug_feat, y_test,
+            X_train_aug_feat,
+            y_train_mix,
+            X_val_aug_feat,
+            y_val,
+            X_test_aug_feat,
+            y_test,
             config=trainer_config_with_aug,
-            feature_mode='pca'
+            feature_mode="pca",
         )
-        results_with_aug = train_result_with_aug['results']
-        
+        results_with_aug = train_result_with_aug["results"]
+
         # Compare augmentation results
         aug_comparison_output = (
-            args.out_dir / 'augmentation_comparison_results.csv' if args.out_dir 
-            else Path('Datasets/augmentation_comparison_results.csv')
+            args.out_dir / "augmentation_comparison_results.csv"
+            if args.out_dir
+            else Path("Datasets/augmentation_comparison_results.csv")
         )
         compare_augmentation(
-            results_no_aug,
-            results_with_aug,
-            output_path=aug_comparison_output
+            results_no_aug, results_with_aug, output_path=aug_comparison_output
         )
-        
+
         # Generate augmentation comparison visualizations
         if args.out_dir:
             from model_A.visualizations import (
                 plot_augmentation_comparison,
                 plot_augmentation_confusion_matrices,
-                plot_augmentation_roc_curves
+                plot_augmentation_roc_curves,
             )
-            
+
             print("\nGenerating augmentation comparison visualizations...")
-            
+
             # Plot metrics comparison
             plot_augmentation_comparison(
                 results_no_aug,
                 results_with_aug,
-                save_path=args.out_dir / 'augmentation_comparison.png'
+                save_path=args.out_dir / "augmentation_comparison.png",
             )
-            
+
             # Plot confusion matrices
             plot_augmentation_confusion_matrices(
                 results_no_aug,
                 results_with_aug,
-                save_path=args.out_dir / 'augmentation_confusion_matrices.png'
+                save_path=args.out_dir / "augmentation_confusion_matrices.png",
             )
-            
+
             # Plot ROC curves
             try:
-                if ('test' in results_no_aug and 'probabilities' in results_no_aug['test'] and
-                    'test' in results_with_aug and 'probabilities' in results_with_aug['test']):
+                if (
+                    "test" in results_no_aug
+                    and "probabilities" in results_no_aug["test"]
+                    and "test" in results_with_aug
+                    and "probabilities" in results_with_aug["test"]
+                ):
                     plot_augmentation_roc_curves(
                         y_test,
-                        np.array(results_no_aug['test']['probabilities']),
-                        np.array(results_with_aug['test']['probabilities']),
-                        save_path=args.out_dir / 'augmentation_roc_curves.png'
+                        np.array(results_no_aug["test"]["probabilities"]),
+                        np.array(results_with_aug["test"]["probabilities"]),
+                        save_path=args.out_dir / "augmentation_roc_curves.png",
                     )
             except Exception as e:
                 print(f"Note: Could not generate augmentation ROC curves: {e}")
-        
+
         # Save detailed augmentation comparison results
         if args.out_dir:
-            aug_detailed_path = args.out_dir / 'augmentation_comparison_detailed.json'
+            aug_detailed_path = args.out_dir / "augmentation_comparison_detailed.json"
             aug_comparison_data = {
-                'without_augmentation': results_no_aug,
-                'with_augmentation': results_with_aug
+                "without_augmentation": results_no_aug,
+                "with_augmentation": results_with_aug,
             }
             write_json(aug_detailed_path, aug_comparison_data)
-            print(f"\nDetailed augmentation comparison results saved to: {aug_detailed_path}")
-        
+            print(
+                f"\nDetailed augmentation comparison results saved to: {aug_detailed_path}"
+            )
+
     else:
         # Single feature mode
         print(f"\nExtracting {feature_mode} features...")
         extractor = FeatureExtractor(
             mode=feature_mode,
-            pca_components=feature_config.get('pca_components', 64),
-            standardize_features=feature_config.get('standardize', False)
+            pca_components=feature_config.get("pca_components", 64),
+            standardize_features=feature_config.get("standardize", False),
         )
-        
+
         X_train_feat = extractor.fit_transform(X_train)
         X_val_feat = extractor.transform(X_val)
         X_test_feat = extractor.transform(X_test)
-        
+
         # Combine configs for trainer (model config should be nested)
         # Update mode in config to match the actual feature mode being used
         trainer_config = {
-            'model': model_config,
+            "model": model_config,
             **feature_config,
             **data_config,
-            'mode': feature_mode,  # Ensure config reflects the actual feature mode
-            'random_state': random_state
+            "mode": feature_mode,  # Ensure config reflects the actual feature mode
+            "random_state": random_state,
         }
         train_result = train_model_a(
-            X_train_feat, y_train,
-            X_val_feat, y_val,
-            X_test_feat, y_test,
+            X_train_feat,
+            y_train,
+            X_val_feat,
+            y_val,
+            X_test_feat,
+            y_test,
             config=trainer_config,
-            feature_mode=feature_mode
+            feature_mode=feature_mode,
         )
-        
+
         # Save results
         if args.out_dir:
-            results_path = args.out_dir / 'model_A_results.json'
-            write_json(results_path, train_result['results'])
+            results_path = args.out_dir / "model_A_results.json"
+            write_json(results_path, train_result["results"])
             print(f"\nResults saved to: {results_path}")
 
 
@@ -990,39 +1045,35 @@ def run_model_b(args):
     print("=" * 80)
     print("Model B: Deep Learning (ResNet-style)")
     print("=" * 80)
-    
+
     # Load configuration
     if args.config:
         config = load_config(args.config)
-        model_config = config.get('model', {})
-        training_config = config.get('training', {})
-        data_config = config.get('data', {})
-        aug_config = config.get('augmentation', {})
-        device = config.get('device', 'cpu')
-        random_state = config.get('random_state', 42)
+        model_config = config.get("model", {})
+        training_config = config.get("training", {})
+        data_config = config.get("data", {})
+        aug_config = config.get("augmentation", {})
+        device = config.get("device", "cpu")
+        random_state = config.get("random_state", 42)
     else:
         # Default configuration
-        model_config = {
-            'base_channels': 16,
-            'num_blocks': 2,
-            'dropout_rate': 0.5
-        }
+        model_config = {"base_channels": 16, "num_blocks": 2, "dropout_rate": 0.5}
         training_config = {
-            'num_epochs': 50,
-            'batch_size': 32,
-            'learning_rate': 0.001,
-            'weight_decay': 1e-4,
-            'early_stopping_patience': 10
+            "num_epochs": 50,
+            "batch_size": 32,
+            "learning_rate": 0.001,
+            "weight_decay": 1e-4,
+            "early_stopping_patience": 10,
         }
         data_config = {
-            'train_fraction': args.train_fraction,
-            'val_fraction': args.val_fraction,
-            'normalize': True
+            "train_fraction": args.train_fraction,
+            "val_fraction": args.val_fraction,
+            "normalize": True,
         }
-        aug_config = {'enabled': True}
-        device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        aug_config = {"enabled": True}
+        device = "cuda" if torch.cuda.is_available() else "cpu"
         random_state = 42
-    
+
     set_random_seeds(random_state)
 
     # Optional CPU performance knobs (safe defaults for Windows)
@@ -1035,33 +1086,32 @@ def run_model_b(args):
             torch.set_num_interop_threads(int(t_interop))
     except Exception:
         pass
-    
+
     # Set device
-    if device == 'cuda' and not torch.cuda.is_available():
+    if device == "cuda" and not torch.cuda.is_available():
         print("CUDA not available, using CPU")
-        device = 'cpu'
-    
+        device = "cpu"
+
     # Load dataset
     print("\nLoading BreastMNIST dataset...")
     # For Model B (deep learning), use minmax normalization to [0, 1] instead of z-score
     # This is more standard for deep learning models (z-score can cause issues with PIL Image conversion)
     dataset = BreastMNISTDataset(
         data_dir=args.data_dir,
-        normalize=data_config.get('normalize', True),
-        normalize_mode='minmax',  # Use minmax for deep learning
-        random_state=random_state
+        normalize=data_config.get("normalize", True),
+        normalize_mode="minmax",  # Use minmax for deep learning
+        random_state=random_state,
     )
-    
+
     # Summarize dataset
     dataset.summarize()
-    
+
     # Get data splits
-    train_fraction = data_config.get('train_fraction', args.train_fraction)
-    val_fraction = data_config.get('val_fraction', args.val_fraction)
-    
+    train_fraction = data_config.get("train_fraction", args.train_fraction)
+    val_fraction = data_config.get("val_fraction", args.val_fraction)
+
     X_train, y_train, X_val, y_val, X_test, y_test = dataset.get_all_splits(
-        train_fraction=train_fraction,
-        val_fraction=val_fraction
+        train_fraction=train_fraction, val_fraction=val_fraction
     )
 
     # Create output directory if it doesn't exist
@@ -1071,16 +1121,14 @@ def run_model_b(args):
     # Model B visualizations (data)
     if args.out_dir:
         from model_B.visualizations import plot_sample_images, plot_class_distribution
+
         plot_sample_images(
-            X_train, y_train,
-            n_samples=9,
-            save_path=args.out_dir / "sample_images.png"
+            X_train, y_train, n_samples=9, save_path=args.out_dir / "sample_images.png"
         )
         plot_class_distribution(
-            y_train, y_val, y_test,
-            save_path=args.out_dir / "class_distribution.png"
+            y_train, y_val, y_test, save_path=args.out_dir / "class_distribution.png"
         )
-    
+
     # Visualize samples if requested
     if args.show_examples:
         print("\nVisualizing sample images...")
@@ -1088,57 +1136,78 @@ def run_model_b(args):
             X_train,
             y_train,
             n_samples=5,
-            save_path=args.out_dir / 'sample_images.png' if args.out_dir else None
+            save_path=args.out_dir / "sample_images.png" if args.out_dir else None,
         )
-    
+
     from model_B.evaluator import save_history, compare_augmentation_b
 
     def _build_model() -> ModelBNet:
         m = ModelBNet(
             num_classes=2,
-            base_channels=model_config.get('base_channels', 16),
-            num_blocks=model_config.get('num_blocks', 2),
-            dropout_rate=model_config.get('dropout_rate', 0.5)
+            base_channels=model_config.get("base_channels", 16),
+            num_blocks=model_config.get("num_blocks", 2),
+            dropout_rate=model_config.get("dropout_rate", 0.5),
         )
         return m.to(device)
 
     def _train_eval_once(augment_enabled: bool, tag: str) -> Dict[str, Any]:
-        augmentation_kwargs = {k: v for k, v in aug_config.items() if k != 'enabled'}
+        augmentation_kwargs = {k: v for k, v in aug_config.items() if k != "enabled"}
         num_workers = int(training_config.get("num_workers", 0))
         train_loader, val_loader, test_loader = get_breastmnist_dataloaders(
-            X_train, y_train,
-            X_val, y_val,
-            X_test, y_test,
-            batch_size=training_config.get('batch_size', 32),
+            X_train,
+            y_train,
+            X_val,
+            y_val,
+            X_test,
+            y_test,
+            batch_size=training_config.get("batch_size", 32),
             augment=augment_enabled,
             augmentation_kwargs=augmentation_kwargs,
-            num_workers=num_workers
+            num_workers=num_workers,
         )
 
         model = _build_model()
         print(f"\nModel Parameters: {model.get_num_parameters():,}")
 
-        checkpoint_dir = (args.out_dir / 'checkpoints' / tag) if args.out_dir else None
+        checkpoint_dir = (args.out_dir / "checkpoints" / tag) if args.out_dir else None
         train_result = train_model_b(
             model,
             train_loader,
             val_loader,
-            config={**training_config, 'random_state': random_state},
+            config={**training_config, "random_state": random_state},
             device=device,
-            checkpoint_dir=str(checkpoint_dir) if checkpoint_dir else None
+            checkpoint_dir=str(checkpoint_dir) if checkpoint_dir else None,
         )
 
         # Evaluate on train/val/test (Model-A-like)
-        train_results = evaluate_model_b(model, train_loader, device=device, split='train', print_results=False)
-        val_results = evaluate_model_b(model, val_loader, device=device, split='val', print_results=False)
-        test_results = evaluate_model_b(model, test_loader, device=device, split='test', print_results=True)
+        train_results = evaluate_model_b(
+            model, train_loader, device=device, split="train", print_results=False
+        )
+        val_results = evaluate_model_b(
+            model, val_loader, device=device, split="val", print_results=False
+        )
+        test_results = evaluate_model_b(
+            model, test_loader, device=device, split="test", print_results=True
+        )
 
         # Save history + training curves
         if args.out_dir:
-            save_history(train_result['history'], str(args.out_dir / f"history_{tag}.csv"), format="csv")
-            save_history(train_result['history'], str(args.out_dir / f"history_{tag}.json"), format="json")
+            save_history(
+                train_result["history"],
+                str(args.out_dir / f"history_{tag}.csv"),
+                format="csv",
+            )
+            save_history(
+                train_result["history"],
+                str(args.out_dir / f"history_{tag}.json"),
+                format="json",
+            )
             from model_B.visualizations import plot_training_curves
-            plot_training_curves(train_result["history"], save_path=args.out_dir / f"training_curves_{tag}.png")
+
+            plot_training_curves(
+                train_result["history"],
+                save_path=args.out_dir / f"training_curves_{tag}.png",
+            )
 
         return {
             "tag": tag,
@@ -1153,7 +1222,7 @@ def run_model_b(args):
     # Determine whether to run ablation (OFF vs ON). CLI overrides config.
     run_ablation = bool(training_config.get("run_ablation", True))
     if hasattr(args, "model_b_ablation") and args.model_b_ablation is not None:
-        run_ablation = (args.model_b_ablation == "on")
+        run_ablation = args.model_b_ablation == "on"
 
     if not run_ablation:
         # Single run (faster on CPU)
@@ -1162,16 +1231,19 @@ def run_model_b(args):
 
         if args.out_dir:
             from model_B.visualizations import plot_confusion_matrix, plot_roc_curve
+
             y_true = np.array(y_test)
             y_pred = np.array(result["test"]["predictions"])
             y_proba = np.array(result["test"]["probabilities"])
             plot_confusion_matrix(
-                y_true, y_pred,
+                y_true,
+                y_pred,
                 title="Model B Confusion Matrix (Test)",
                 save_path=args.out_dir / "confusion_matrices.png",
             )
             plot_roc_curve(
-                y_true, y_proba[:, 1],
+                y_true,
+                y_proba[:, 1],
                 title="Model B ROC Curve (Test)",
                 save_path=args.out_dir / "roc_curves.png",
             )
@@ -1201,7 +1273,10 @@ def run_model_b(args):
     if args.out_dir:
         write_json(
             args.out_dir / "augmentation_comparison_detailed.json",
-            {"without_augmentation": results_without, "with_augmentation": results_with},
+            {
+                "without_augmentation": results_without,
+                "with_augmentation": results_with,
+            },
         )
         compare_augmentation_b(
             results_without_aug=results_without,
@@ -1217,6 +1292,7 @@ def run_model_b(args):
             plot_confusion_matrix,
             plot_roc_curve,
         )
+
         plot_augmentation_comparison(
             results_without["test"]["metrics"],
             results_with["test"]["metrics"],
@@ -1277,170 +1353,174 @@ def run_model_b(args):
 def main():
     """Main function."""
     parser = argparse.ArgumentParser(
-        description='AMLS Assignment - BreastMNIST Classification',
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter
-    )
-    
-    parser.add_argument(
-        '--model',
-        type=str,
-        choices=['A', 'B', 'both'],
-        default='both',
-        help='Model to train (A for classical ML, B for deep learning, both for both models)'
-    )
-    
-    parser.add_argument(
-        '--mode',
-        type=str,
-        choices=['train', 'test'],
-        default='train',
-        help='Mode: train or test'
-    )
-    
-    parser.add_argument(
-        '--config',
-        type=str,
-        default=None,
-        help='Path to configuration YAML file (can specify separate configs with --config_A and --config_B)'
-    )
-    
-    parser.add_argument(
-        '--config_A',
-        type=str,
-        default=None,
-        help='Path to configuration YAML file for Model A'
-    )
-    
-    parser.add_argument(
-        '--config_B',
-        type=str,
-        default=None,
-        help='Path to configuration YAML file for Model B'
-    )
-    
-    parser.add_argument(
-        '--data_dir',
-        type=str,
-        default='Datasets',
-        help='Path to directory containing BreastMNIST.npz file'
-    )
-    
-    parser.add_argument(
-        '--out_dir',
-        type=str,
-        default='results',
-        help='Output directory for results and checkpoints (default: results)'
-    )
-    
-    parser.add_argument(
-        '--train_fraction',
-        type=float,
-        default=1.0,
-        help='Fraction of training set to use (0 < fraction <= 1.0)'
-    )
-    
-    parser.add_argument(
-        '--val_fraction',
-        type=float,
-        default=1.0,
-        help='Fraction of validation set to use (0 < fraction <= 1.0)'
-    )
-    
-    parser.add_argument(
-        '--feature_mode',
-        type=str,
-        choices=['raw', 'pca', 'hog'],
-        default=None,
-        help='Feature mode for Model A (if not specified, compares all modes: raw, PCA, HOG)'
-    )
-    
-    parser.add_argument(
-        '--compare_all_features',
-        action='store_true',
-        help='Compare all feature modes (raw, PCA, HOG) - default behavior when no feature_mode specified'
-    )
-    
-    parser.add_argument(
-        '--single_feature_mode',
-        action='store_true',
-        help='Use single feature mode instead of comparing all (overrides default comparison behavior)'
-    )
-    
-    parser.add_argument(
-        '--show_examples',
-        action='store_true',
-        help='Visualize sample images from the dataset'
+        description="AMLS Assignment - BreastMNIST Classification",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
 
     parser.add_argument(
-        '--model_b_ablation',
+        "--model",
         type=str,
-        choices=['on', 'off'],
-        default=None,
-        help="Model B only: run augmentation ablation (on=OFF vs ON, off=single run). Overrides config if set."
+        choices=["A", "B", "both"],
+        default="both",
+        help="Model to train (A for classical ML, B for deep learning, both for both models)",
     )
-    
+
+    parser.add_argument(
+        "--mode",
+        type=str,
+        choices=["train", "test"],
+        default="train",
+        help="Mode: train or test",
+    )
+
+    parser.add_argument(
+        "--config",
+        type=str,
+        default=None,
+        help="Path to configuration YAML file (can specify separate configs with --config_A and --config_B)",
+    )
+
+    parser.add_argument(
+        "--config_A",
+        type=str,
+        default=None,
+        help="Path to configuration YAML file for Model A",
+    )
+
+    parser.add_argument(
+        "--config_B",
+        type=str,
+        default=None,
+        help="Path to configuration YAML file for Model B",
+    )
+
+    parser.add_argument(
+        "--data_dir",
+        type=str,
+        default="Datasets",
+        help="Path to directory containing BreastMNIST.npz file",
+    )
+
+    parser.add_argument(
+        "--out_dir",
+        type=str,
+        default="results",
+        help="Output directory for results and checkpoints (default: results)",
+    )
+
+    parser.add_argument(
+        "--train_fraction",
+        type=float,
+        default=1.0,
+        help="Fraction of training set to use (0 < fraction <= 1.0)",
+    )
+
+    parser.add_argument(
+        "--val_fraction",
+        type=float,
+        default=1.0,
+        help="Fraction of validation set to use (0 < fraction <= 1.0)",
+    )
+
+    parser.add_argument(
+        "--feature_mode",
+        type=str,
+        choices=["raw", "pca", "hog"],
+        default=None,
+        help="Feature mode for Model A (if not specified, compares all modes: raw, PCA, HOG)",
+    )
+
+    parser.add_argument(
+        "--compare_all_features",
+        action="store_true",
+        help="Compare all feature modes (raw, PCA, HOG) - default behavior when no feature_mode specified",
+    )
+
+    parser.add_argument(
+        "--single_feature_mode",
+        action="store_true",
+        help="Use single feature mode instead of comparing all (overrides default comparison behavior)",
+    )
+
+    parser.add_argument(
+        "--show_examples",
+        action="store_true",
+        help="Visualize sample images from the dataset",
+    )
+
+    parser.add_argument(
+        "--model_b_ablation",
+        type=str,
+        choices=["on", "off"],
+        default=None,
+        help="Model B only: run augmentation ablation (on=OFF vs ON, off=single run). Overrides config if set.",
+    )
+
     args = parser.parse_args()
-    
+
     # Convert out_dir to Path
     if args.out_dir:
         args.out_dir = Path(args.out_dir)
-    
+
     # Determine which models to run
     models_to_run = []
-    if args.model == 'A':
-        models_to_run = ['A']
-    elif args.model == 'B':
-        models_to_run = ['B']
+    if args.model == "A":
+        models_to_run = ["A"]
+    elif args.model == "B":
+        models_to_run = ["B"]
     else:  # 'both' or default
-        models_to_run = ['A', 'B']
-    
+        models_to_run = ["A", "B"]
+
     # Run the selected models
     for model in models_to_run:
         # Create model-specific args
         model_args = argparse.Namespace(**vars(args))
-        
+
         # Set model-specific config if provided
         # Default to model-specific config files if no config specified
-        if model == 'A':
+        if model == "A":
             if args.config_A:
                 model_args.config = args.config_A
             elif not args.config:
                 # Default to model_A/config.yaml
-                default_config = Path('model_A/config.yaml')
+                default_config = Path("model_A/config.yaml")
                 if default_config.exists():
                     model_args.config = str(default_config)
             elif args.config:
                 model_args.config = args.config
-        elif model == 'B':
+        elif model == "B":
             if args.config_B:
                 model_args.config = args.config_B
             elif not args.config:
                 # Default to model_B/config.yaml
-                default_config = Path('model_B/config.yaml')
+                default_config = Path("model_B/config.yaml")
                 if default_config.exists():
                     model_args.config = str(default_config)
             elif args.config:
                 model_args.config = args.config
-        
+
         # Set model-specific output directories
-        if model == 'A':
-            model_args.out_dir = args.out_dir / 'model_A' if args.out_dir else Path('results/model_A')
-        elif model == 'B':
-            model_args.out_dir = args.out_dir / 'model_B' if args.out_dir else Path('results/model_B')
-        
+        if model == "A":
+            model_args.out_dir = (
+                args.out_dir / "model_A" if args.out_dir else Path("results/model_A")
+            )
+        elif model == "B":
+            model_args.out_dir = (
+                args.out_dir / "model_B" if args.out_dir else Path("results/model_B")
+            )
+
         # Run the model
-        if model == 'A':
+        if model == "A":
             print("\n" + "=" * 80)
             print("RUNNING MODEL A")
             print("=" * 80)
             run_model_a(model_args)
-        elif model == 'B':
+        elif model == "B":
             print("\n" + "=" * 80)
             print("RUNNING MODEL B")
             print("=" * 80)
             run_model_b(model_args)
-        
+
         # Add separator between models if running both
         if len(models_to_run) > 1 and model != models_to_run[-1]:
             print("\n" + "=" * 80)
@@ -1464,7 +1544,9 @@ def main():
                 random_state=42,
             )
             if "error" in paths:
-                print(f"\nNote: Could not generate model comparison plots: {paths['error']}")
+                print(
+                    f"\nNote: Could not generate model comparison plots: {paths['error']}"
+                )
             else:
                 print("\nModel comparison plots written:")
                 for k, v in paths.items():
@@ -1474,6 +1556,5 @@ def main():
             print(f"\nNote: Could not generate model comparison plots: {e}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
-
